@@ -34,13 +34,15 @@ Người dùng vừa hỏi:
         res = requests.post(GEMINI_API_URL, headers=headers, json=body)
         res_json = res.json()
 
-        # Lấy nội dung trả lời
-        text = res_json['candidates'][0]['content']['parts'][0]['text']
-        return text.strip()
-    except Exception as e:
-        print("Lỗi Gemini:", e)
-        return "😅 Bot đang hơi lag nhẹ, để anh Bằng xử lý cái là mượt liền nha!"
+        # In log ra terminal Render
+        print("📥 Gemini response JSON:", res_json)
 
+        # Lấy nội dung trả lời
+        return res_json['candidates'][0]['content']['parts'][0]['text'].strip()
+    except Exception as e:
+        print("❌ Lỗi xảy ra:", e)
+        return f"❌ Lỗi hệ thống: {str(e)}"
+        
 @app.route("/ask", methods=["GET"])
 def ask():
     cauhoi = request.args.get("cauhoi")
