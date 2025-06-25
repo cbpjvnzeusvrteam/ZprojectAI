@@ -42,7 +42,7 @@ def send_message(recipient_id, message_text):
     }
     headers = {"Content-Type": "application/json"}
     requests.post(url, headers=headers, json=data)
-    
+
 @app.route("/", methods=['GET', 'POST', 'HEAD'])
 def webhook():
     if request.method == 'GET':
@@ -63,6 +63,9 @@ def webhook():
                         reply = generate_response_from_gemini(text)
                         send_message(sender_id, f"🤖 ZPROJECT BOT: {reply}")
         return "OK"
+
+    elif request.method == 'HEAD':
+        return '', 200  # ✅ Trả về hợp lệ cho HEAD request
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
