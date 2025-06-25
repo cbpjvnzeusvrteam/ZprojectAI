@@ -1,5 +1,6 @@
 from flask import Flask, request
 import requests
+import os
 import google.generativeai as genai
 
 app = Flask(__name__)
@@ -30,16 +31,16 @@ Dưới đây là tin nhắn người dùng gửi:
     try:
         response = model.generate_content(prompt)
         return response.text.strip()
-    except Exception as e:
-        return "😅 Bot đang hơi lag chút, để anh Bằng xử lý cái là hết liền nha!"
+    except Exception:
+        return "😅 Bot đang hơi lag nhẹ, để anh Bằng xử lý cái là mượt liền nha!"
 
 def send_message(recipient_id, message_text):
+    url = f"https://graph.facebook.com/v13.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
     data = {
         "recipient": {"id": recipient_id},
         "message": {"text": message_text}
     }
     headers = {"Content-Type": "application/json"}
-    url = f"https://graph.facebook.com/v13.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
     requests.post(url, headers=headers, json=data)
 
 @app.route("/", methods=['GET', 'POST'])
@@ -53,12 +54,16 @@ def webhook():
 
     elif request.method == 'POST':
         payload = request.json
-        for event in payload['entry']:
-            for message in event['messaging']:
-                if message.get('message'):
-                    sender_id = message['sender']['id']
-                    text = message['message'].get('text')
+        for entry in payload.get('entry', []):
+            for event in entry.get('messaging', []):
+                if event.get('message'):
+                    sender_id = event['sender']['id']
+                    text = event['message'].get('text')
                     if text:
                         reply = generate_response_from_gemini(text)
                         send_message(sender_id, f"🤖 ZPROJECT BOT: {reply}")
         return "OK"
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
