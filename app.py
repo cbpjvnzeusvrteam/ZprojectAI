@@ -42,9 +42,10 @@ def send_message(recipient_id, message_text):
     }
     headers = {"Content-Type": "application/json"}
     requests.post(url, headers=headers, json=data)
-
-@app.route("/", methods=['GET', 'POST', 'HEAD'])
+    
+@app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
+    ...
     if request.method == 'GET':
         token = request.args.get("hub.verify_token")
         challenge = request.args.get("hub.challenge")
