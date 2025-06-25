@@ -1,73 +1,55 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import requests
 import os
-import google.generativeai as genai
 
 app = Flask(__name__)
 
-PAGE_ACCESS_TOKEN = 'EAAK5M1cXJscBO4xGSB76rKqKPrZBDpQ3D5YtLqhvEG66Gu0wqLcrEjzU0npUOqYfMqZA7FCZC1gk9Gcjs3gKpLPjZBvQvgKLOivqN3F6UeoucqxY5VafI6kGTWPpENhfycot76uC5jCa5lft2ph3FEyvbV37WYwDjhKz9CdveSH95mA3bEAROpZCBstDZALxHjZCqZBRfAMs2afX9wA402ZCghtsjTtb1uNZCP8MP26pNtNwZDZD'
-VERIFY_TOKEN = 'zprojectverify'
-GEMINI_API_KEY = 'AIzaSyCVr7G41rBgcX0mcBgsr_6dMkrv4tgtzCk'
+GEMINI_API_KEY = "AIzaSyA2y3gaSFOfiRHpmH2CK3KL-7YqV-75xSM"
+GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
 
-# Cấu hình Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+def generate_response(user_text):
+    headers = {
+        "Content-Type": "application/json"
+    }
 
-def generate_response_from_gemini(user_text):
-    prompt = f"""Bạn là Zproject X Duong Cong Bang — một trợ lý AI được tạo ra bởi Dương Công Bằng. 
-Bạn nói chuyện tự tin, dí dỏm, đôi khi ngầu ngầu, luôn thân thiện và cực kỳ chuyên nghiệp khi cần. 
-Phong cách như Bằng: trả lời thẳng vào vấn đề, không vòng vo, thêm biểu cảm dễ thương, vui tính đúng lúc. 
-Bạn dùng emoji (😎🔥✨) và từ ngữ giới trẻ như "khét lẹt", "chuẩn không cần chỉnh", nhưng vẫn rõ ràng, chuyên sâu.
+    body = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": f"""Bạn là Zproject X Duong Cong Bang — AI do anh Bằng đẹp trai tạo ra 😎.
 
-Bạn đại diện cho các dự án như tool hack proxy, auto AI, web API, bot Zalo AI, QR code, Minecraft PE...
+Phong cách: trả lời nhanh, gọn, khét lẹt, đôi khi chèn emoji như 🔥✨ nhưng vẫn chính xác. Ai hỏi kỹ thuật thì trả lời cụ thể + ví dụ code nếu được.
 
-• Nếu ai hỏi "Bạn là ai?" hoặc "Ai điều hành bạn?", bạn trả lời: "Tôi là Zproject X Duong Cong Bang — được vận hành bởi chính anh Bằng đẹp trai 😎."
-
-• Nếu câu hỏi liên quan đến kỹ thuật, bạn sẽ trả lời rõ + ví dụ cụ thể hoặc code gọn gàng, dễ hiểu.
-
-Dưới đây là tin nhắn người dùng gửi:
-"{user_text}"
+Người dùng vừa hỏi:
+{user_text}
 """
+                    }
+                ]
+            }
+        ]
+    }
+
     try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
-    except Exception:
+        res = requests.post(GEMINI_API_URL, headers=headers, json=body)
+        res_json = res.json()
+
+        # Lấy nội dung trả lời
+        text = res_json['candidates'][0]['content']['parts'][0]['text']
+        return text.strip()
+    except Exception as e:
+        print("Lỗi Gemini:", e)
         return "😅 Bot đang hơi lag nhẹ, để anh Bằng xử lý cái là mượt liền nha!"
 
-def send_message(recipient_id, message_text):
-    url = f"https://graph.facebook.com/v13.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
-    data = {
-        "recipient": {"id": recipient_id},
-        "message": {"text": message_text}
-    }
-    headers = {"Content-Type": "application/json"}
-    requests.post(url, headers=headers, json=data)
-    
-@app.route('/webhook', methods=['GET', 'POST'])
-def webhook():
-    ...
-    if request.method == 'GET':
-        token = request.args.get("hub.verify_token")
-        challenge = request.args.get("hub.challenge")
-        if token == VERIFY_TOKEN:
-            return challenge
-        return "Sai verify token"
+@app.route("/ask", methods=["GET"])
+def ask():
+    cauhoi = request.args.get("cauhoi")
+    if not cauhoi:
+        return jsonify({"error": "Thiếu tham số 'cauhoi'"}), 400
 
-    elif request.method == 'POST':
-        payload = request.json
-        for entry in payload.get('entry', []):
-            for event in entry.get('messaging', []):
-                if event.get('message'):
-                    sender_id = event['sender']['id']
-                    text = event['message'].get('text')
-                    if text:
-                        reply = generate_response_from_gemini(text)
-                        send_message(sender_id, f"🤖 ZPROJECT BOT: {reply}")
-        return "OK"
+    reply = generate_response(cauhoi)
+    return jsonify({"response": reply})
 
-    elif request.method == 'HEAD':
-        return '', 200  # ✅ Trả về hợp lệ cho HEAD request
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host='0.0.0.0', port=port)
